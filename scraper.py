@@ -18,7 +18,7 @@ class Scraper:
 
         chrome_options = Options()
         #chrome_options.headless = True
-        chrome_options.add_argument('--proxy-server=%s' % proxy)
+        #chrome_options.add_argument('--proxy-server=%s' % proxy)
         chrome_options.add_argument("user-data-dir=selenium")
 
         print('Scraper: setting up driver.')
@@ -39,8 +39,29 @@ class Scraper:
 
 
 def get_followers_ct_method(page_source):
-    match = re.search('edge_followed_by":{"count":(.+?)\}', page_source).group(1)
-    followers_count = int(match)
-    return followers_count
+    match = re.search('Temporarily Locked', page_source)
+    if match:
+        print('get_followers_ct: detected account locked.')
+        raise Exception('get_followers_ct: account locked.')
 
+    match = re.search('edge_followed_by":{"count":(.+?)\}', page_source)
+    if match:
+        group = match.group(1)
+        followers_count = int(group)
+        return followers_count
+
+    print('get_followers_ct: search failed with crib="edge_followed_by". ' +
+        'Trying other cribs.')
+
+    match = re.search('"userInteractionCount":"(.+?)"\}', page_source)
+    if match:
+        group = match.group(1)
+        followers_count = int(group)
+        return followers_count
+    else:
+        print('get_followers_ct: search failed with crib="userInteractionCount". ' +
+            'Wrote page source to "./failed.html".')
+        with open('failed.html', 'w') as file:
+            file.write(page_source)
+        raise Exception('get_followers_ct: search failed. crib="userInteractionCount".')
 
